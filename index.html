@@ -1,82 +1,42 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Google Picker Demo (GitHub Pages)</title>
-  <!-- GIS OAuth library -->
-  <script src="https://accounts.google.com/gsi/client"></script>
-  <!-- Google API (Picker library) -->
-  <script src="https://apis.google.com/js/api.js"></script>
-  <style>
-    body { font-family: sans-serif; margin: 40px; }
-    button { padding: 8px 16px; font-size: 16px; }
-    #result { margin-top: 20px; font-weight: bold; }
-  </style>
-</head>
-<body>
-  <h2>Google Drive Picker Demo</h2>
-  <p id="status">Not signed in</p>
-  <button id="auth-btn">Sign in & Open Picker</button>
-  <p id="result"></p>
+<script src="https://accounts.google.com/gsi/client"></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script>
+  const CLIENT_ID = "706836326522-l3m5tj3so8be3ff9mn9mf7lc99sfc4r0.apps.googleusercontent.com";
+  const API_KEY = "AIzaSyBAbkOJJTN7q5PhiTkFeEfVje-YuXfsHP8";
+  const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+  let oauthToken;
 
-  <script>
-    // =================== REPLACE THESE ===================
-    const CLIENT_ID = "706836326522-l3m5tj3so8be3ff9mn9mf7lc99sfc4r0.apps.googleusercontent.com";
-    const API_KEY = "AIzaSyBAbkOJJTN7q5PhiTkFeEfVje-YuXfsHP8";
-    const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
-    // ======================================================
+  function createPicker() {
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+      .setIncludeFolders(true)
+      .setSelectFolderEnabled(true);
 
-    let oauthToken;
+    const picker = new google.picker.PickerBuilder()
+      .setDeveloperKey(API_KEY)
+      .setOAuthToken(oauthToken)
+      .addView(view)
+      .setCallback((data) => {
+        if (data.action === google.picker.Action.PICKED) {
+          console.log(data.docs);
+        }
+      })
+      .build();
+    picker.setVisible(true);
+  }
 
-    // Load the Picker API
-    function onApiLoad() {
-      gapi.load("picker", () => console.log("Picker library loaded"));
+  const tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      oauthToken = tokenResponse.access_token;
+      createPicker();
     }
+  });
 
-    // Create Google Picker
-    function createPicker() {
-      if (!oauthToken) {
-        alert("Authorization token not found!");
-        return;
-      }
-
-      const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-        .setIncludeFolders(true)
-        .setSelectFolderEnabled(true);
-
-      const picker = new google.picker.PickerBuilder()
-        .setDeveloperKey(API_KEY)
-        .setOAuthToken(oauthToken)
-        .addView(view)
-        .setCallback((data) => {
-          if (data.action === google.picker.Action.PICKED) {
-            const file = data.docs[0];
-            document.getElementById("result").textContent =
-              `Selected: ${file.name} (ID: ${file.id})`;
-          }
-        })
-        .build();
-      picker.setVisible(true);
-    }
-
-    // Initialize GIS token client
-    const tokenClient = google.accounts.oauth2.initTokenClient({
-      client_id: CLIENT_ID,
-      scope: SCOPES,
-      callback: (tokenResponse) => {
-        oauthToken = tokenResponse.access_token;
-        document.getElementById("status").textContent = "Signed in";
-        createPicker();
-      }
-    });
-
-    // Button click → request OAuth token
-    window.onload = () => {
-      onApiLoad(); // load Picker
-      document.getElementById("auth-btn").onclick = () => {
-        tokenClient.requestAccessToken();
-      };
+  window.onload = () => {
+    gapi.load("picker", () => console.log("Picker loaded"));
+    document.getElementById("auth-btn").onclick = () => {
+      tokenClient.requestAccessToken();
     };
-  </script>
-</body>
-</html>
+  };
+</script>
