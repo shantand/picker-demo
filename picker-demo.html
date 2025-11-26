@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Google Picker Demo</title>
+    <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
+    <script type="text/javascript">
+
+      const CLIENT_ID = "706836326522-l3m5tj3so8be3ff9mn9mf7lc99sfc4r0.apps.googleusercontent.com";
+      const API_KEY = "AIzaSyBAbkOJJTN7q5PhiTkFeEfVje-YuXfsHP8";
+      const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+
+      let oauthToken;
+
+      function loadPicker() {
+        gapi.load('client:auth2', initAuth);
+      }
+
+      function initAuth() {
+        gapi.client
+          .init({
+            apiKey: API_KEY,
+            clientId: CLIENT_ID,
+            scope: SCOPES,
+            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
+          })
+          .then(() => {
+            return gapi.auth2.getAuthInstance().signIn();
+          })
+          .then(() => {
+            oauthToken = gapi.auth.getToken().access_token;
+            createPicker();
+          });
+      }
+
+      function createPicker() {
+        if (oauthToken) {
+          const view = new google.picker.View(google.picker.ViewId.DOCS);
+          const picker = new google.picker.PickerBuilder()
+            .enableFeature(google.picker.Feature.NAV_HIDDEN)
+            .setOAuthToken(oauthToken)
+            .setDeveloperKey(API_KEY)
+            .addView(view)
+            .setCallback(pickerCallback)
+            .build();
+          picker.setVisible(true);
+        }
+      }
+
+      function pickerCallback(data) {
+        if (data.action === google.picker.Action.PICKED) {
+          const file = data.docs[0];
+          alert("Selected file:\n" + file.name + "\nID: " + file.id);
+        }
+      }
+
+      // Load picker library
+      gapi.load('picker', () => {});
+    </script>
+  </head>
+
+  <body>
+    <h3>Google Drive Picker Demo</h3>
+    <button onclick="loadPicker()">Open Google Picker</button>
+  </body>
+</html>
