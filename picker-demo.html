@@ -1,65 +1,79 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Google Picker Demo</title>
-    <script type="text/javascript" src="https://apis.google.com/js/api.js"></script>
-    <script type="text/javascript">
-
+    <meta charset="utf-8" />
+    <title>Google Picker Demo (GitHub Pages)</title>
+    <script src="https://apis.google.com/js/api.js"></script>
+    <script>
+      // === REPLACE THESE with your credentials ===
       const CLIENT_ID = "706836326522-l3m5tj3so8be3ff9mn9mf7lc99sfc4r0.apps.googleusercontent.com";
       const API_KEY = "AIzaSyBAbkOJJTN7q5PhiTkFeEfVje-YuXfsHP8";
+      // ===========================================
       const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
 
-      let oauthToken;
+      let oauthToken = null;
 
-      function loadPicker() {
-        gapi.load('client:auth2', initAuth);
+      function onApiLoad() {
+        // Load the 'client', 'auth2' and 'picker' libraries
+        gapi.load("client:auth2:picker", initAuth);
       }
 
-      function initAuth() {
-        gapi.client
-          .init({
-            apiKey: API_KEY,
-            clientId: CLIENT_ID,
-            scope: SCOPES,
-            discoveryDocs: ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"],
-          })
-          .then(() => {
-            return gapi.auth2.getAuthInstance().signIn();
-          })
-          .then(() => {
-            oauthToken = gapi.auth.getToken().access_token;
+      async function initAuth() {
+        await gapi.client.init({
+          apiKey: API_KEY,
+          clientId: CLIENT_ID,
+          scope: SCOPES
+        });
+
+        const authInstance = gapi.auth2.getAuthInstance();
+
+        // You can call signIn() when user clicks — here we do it on page load for demo
+        document.getElementById("auth-btn").onclick = async () => {
+          try {
+            const user = await authInstance.signIn();
+            oauthToken = user.getAuthResponse().access_token;
+            document.getElementById("status").textContent = "Signed in";
             createPicker();
-          });
+          } catch (err) {
+            console.error("SignIn error", err);
+            alert("Sign-in failed: " + err.error);
+          }
+        };
       }
 
       function createPicker() {
-        if (oauthToken) {
-          const view = new google.picker.View(google.picker.ViewId.DOCS);
-          const picker = new google.picker.PickerBuilder()
-            .enableFeature(google.picker.Feature.NAV_HIDDEN)
-            .setOAuthToken(oauthToken)
-            .setDeveloperKey(API_KEY)
-            .addView(view)
-            .setCallback(pickerCallback)
-            .build();
-          picker.setVisible(true);
+        if (!oauthToken) {
+          alert("Not signed in yet.");
+          return;
         }
+
+        const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+          .setIncludeFolders(true)
+          .setSelectFolderEnabled(true);
+
+        const picker = new google.picker.PickerBuilder()
+          .setOAuthToken(oauthToken)
+          .setDeveloperKey(API_KEY)
+          .addView(view)
+          .setCallback(pickerCallback)
+          .build();
+
+        picker.setVisible(true);
       }
 
       function pickerCallback(data) {
         if (data.action === google.picker.Action.PICKED) {
           const file = data.docs[0];
-          alert("Selected file:\n" + file.name + "\nID: " + file.id);
+          document.getElementById("result").textContent =
+            "Selected: " + file.name + " (ID: " + file.id + ")";
         }
       }
-
-      // Load picker library
-      gapi.load('picker', () => {});
     </script>
   </head>
-
-  <body>
-    <h3>Google Drive Picker Demo</h3>
-    <button onclick="loadPicker()">Open Google Picker</button>
+  <body onload="onApiLoad()">
+    <h2>Google Picker Demo (GitHub Pages)</h2>
+    <p id="status">Not signed in</p>
+    <button id="auth-btn">Sign in & Open Picker</button>
+    <p id="result"></p>
   </body>
 </html>
