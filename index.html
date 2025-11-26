@@ -1,79 +1,82 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Google Picker Demo (GitHub Pages)</title>
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script>
-      // === REPLACE THESE with your credentials ===
-      const CLIENT_ID = "706836326522-l3m5tj3so8be3ff9mn9mf7lc99sfc4r0.apps.googleusercontent.com";
-      const API_KEY = "AIzaSyBAbkOJJTN7q5PhiTkFeEfVje-YuXfsHP8";
-      // ===========================================
-      const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Google Picker Demo (GitHub Pages)</title>
+  <!-- GIS OAuth library -->
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <!-- Google API (Picker library) -->
+  <script src="https://apis.google.com/js/api.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 40px; }
+    button { padding: 8px 16px; font-size: 16px; }
+    #result { margin-top: 20px; font-weight: bold; }
+  </style>
+</head>
+<body>
+  <h2>Google Drive Picker Demo</h2>
+  <p id="status">Not signed in</p>
+  <button id="auth-btn">Sign in & Open Picker</button>
+  <p id="result"></p>
 
-      let oauthToken = null;
+  <script>
+    // =================== REPLACE THESE ===================
+    const CLIENT_ID = "706836326522-l3m5tj3so8be3ff9mn9mf7lc99sfc4r0.apps.googleusercontent.com";
+    const API_KEY = "AIzaSyBAbkOJJTN7q5PhiTkFeEfVje-YuXfsHP8";
+    const SCOPES = "https://www.googleapis.com/auth/drive.readonly";
+    // ======================================================
 
-      function onApiLoad() {
-        // Load the 'client', 'auth2' and 'picker' libraries
-        gapi.load("client:auth2:picker", initAuth);
+    let oauthToken;
+
+    // Load the Picker API
+    function onApiLoad() {
+      gapi.load("picker", () => console.log("Picker library loaded"));
+    }
+
+    // Create Google Picker
+    function createPicker() {
+      if (!oauthToken) {
+        alert("Authorization token not found!");
+        return;
       }
 
-      async function initAuth() {
-        await gapi.client.init({
-          apiKey: API_KEY,
-          clientId: CLIENT_ID,
-          scope: SCOPES
-        });
+      const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
+        .setIncludeFolders(true)
+        .setSelectFolderEnabled(true);
 
-        const authInstance = gapi.auth2.getAuthInstance();
-
-        // You can call signIn() when user clicks — here we do it on page load for demo
-        document.getElementById("auth-btn").onclick = async () => {
-          try {
-            const user = await authInstance.signIn();
-            oauthToken = user.getAuthResponse().access_token;
-            document.getElementById("status").textContent = "Signed in";
-            createPicker();
-          } catch (err) {
-            console.error("SignIn error", err);
-            alert("Sign-in failed: " + err.error);
+      const picker = new google.picker.PickerBuilder()
+        .setDeveloperKey(API_KEY)
+        .setOAuthToken(oauthToken)
+        .addView(view)
+        .setCallback((data) => {
+          if (data.action === google.picker.Action.PICKED) {
+            const file = data.docs[0];
+            document.getElementById("result").textContent =
+              `Selected: ${file.name} (ID: ${file.id})`;
           }
-        };
+        })
+        .build();
+      picker.setVisible(true);
+    }
+
+    // Initialize GIS token client
+    const tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: CLIENT_ID,
+      scope: SCOPES,
+      callback: (tokenResponse) => {
+        oauthToken = tokenResponse.access_token;
+        document.getElementById("status").textContent = "Signed in";
+        createPicker();
       }
+    });
 
-      function createPicker() {
-        if (!oauthToken) {
-          alert("Not signed in yet.");
-          return;
-        }
-
-        const view = new google.picker.DocsView(google.picker.ViewId.DOCS)
-          .setIncludeFolders(true)
-          .setSelectFolderEnabled(true);
-
-        const picker = new google.picker.PickerBuilder()
-          .setOAuthToken(oauthToken)
-          .setDeveloperKey(API_KEY)
-          .addView(view)
-          .setCallback(pickerCallback)
-          .build();
-
-        picker.setVisible(true);
-      }
-
-      function pickerCallback(data) {
-        if (data.action === google.picker.Action.PICKED) {
-          const file = data.docs[0];
-          document.getElementById("result").textContent =
-            "Selected: " + file.name + " (ID: " + file.id + ")";
-        }
-      }
-    </script>
-  </head>
-  <body onload="onApiLoad()">
-    <h2>Google Picker Demo (GitHub Pages)</h2>
-    <p id="status">Not signed in</p>
-    <button id="auth-btn">Sign in & Open Picker</button>
-    <p id="result"></p>
-  </body>
+    // Button click → request OAuth token
+    window.onload = () => {
+      onApiLoad(); // load Picker
+      document.getElementById("auth-btn").onclick = () => {
+        tokenClient.requestAccessToken();
+      };
+    };
+  </script>
+</body>
 </html>
