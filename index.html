@@ -35,6 +35,20 @@
       .build();
     picker.setVisible(true);
   }
+  function pickerCallback(data) {
+    if (data.action === google.picker.Action.PICKED) {
+      const file = data.docs[0];
+
+      const html = `
+            <h3>Selected File:</h3>
+            <p><strong>Name:</strong> ${file.name}</p>
+            <p><strong>ID:</strong> ${file.id}</p>
+            <p><strong>Type:</strong> ${file.type}</p>
+          `;
+
+          document.getElementById("result").innerHTML = html;
+      }
+  }
 
   const tokenClient = google.accounts.oauth2.initTokenClient({
     client_id: CLIENT_ID,
