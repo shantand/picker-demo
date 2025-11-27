@@ -28,11 +28,7 @@
       .setDeveloperKey(API_KEY)
       .setOAuthToken(oauthToken)
       .addView(view)
-      .setCallback((data) => {
-        if (data.action === google.picker.Action.PICKED) {
-          console.log(data.docs);
-        }
-      })
+      .setCallback(pickerCallback)
       .build();
     picker.setVisible(true);
   }
